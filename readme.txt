@@ -3,7 +3,7 @@ Contributors: sevenspark, tessawatkinsllc
 Donate link: https://just1voice.com/donate/
 Tags: Contact Form 7, contact, contact form, dynamic, text, input, GET, POST, title, slug, autofill, auto-fill, prepopulate, pre-populate, form field
 Tested up to: 6.1.1
-Stable tag: 3.2
+Stable tag: 4.0.0
 
 This plugin provides additional form tags for the Contact Form 7 plugin. It allows dynamic generation of content for text or hidden input fields using any shortcode.
 
@@ -19,6 +19,9 @@ Contact Form 7 is an excellent WordPress plugin and one of the top choices of fr
 * Populating with user info
 * Populating with custom fields
 * Generating unique identifiers for support tickets
+* Getting a list of post categories or other custom taxonomies
+* Getting a value from a cookie
+* Getting custom theme modifications
 * Any value using custom shortcodes
 
 The possibilities are endless!
@@ -63,13 +66,13 @@ Your Contact Form 7 Tag would look like: `[dynamictext dynamicname "CF7_URL"]`
 
 Optional parameter: `part`, which will return a parsed part of the URL.  Valid values are `host`, `query`, and `path`
 
-Host: Just the domain name and tld 
+Host: Just the domain name and tld
 `[dynamictext host "CF7_URL part='host'"]`
 
-Query: The query string after the ?, if one exists 
+Query: The query string after the ?, if one exists
 `[dynamictext query "CF7_URL part='query'"]`
 
-Path: The URL path, for example, /contact, if one exists 
+Path: The URL path, for example, /contact, if one exists
 `[dynamictext path "CF7_URL part='path'"]`
 
 
@@ -240,9 +243,30 @@ Please check out the [FAQ on our website](https://aurisecreative.com/docs/contac
 
 == Upgrade Notice ==
 
-* 3.1.3 Fixed the syntax error that reappeared in 3.1.2. My apologies!
+= 4.0.0 =
+
+New built-in shortcodes for getting cookies, taxonomies, and theme options!
 
 == Changelog ==
+
+= 4.0.0 =
+
+**Release Date: April 3, 2023**
+
+* Breaking: Changed how sanitization works in built-in shortcodes
+* Breaking: Changed how escaping works in built-in shortcodes
+* Breaking: Removed `array_key_first()` since it was added for compatibility with PHP versions prior to 7.3 and this plugin is marked for 7.4 and above.
+* Feature: Added the `CF7_get_cookie` shortcode. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-cookie/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme).
+* Feature: Added the `CF7_get_taxonomy` shortcode. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-taxonomy/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme).
+* Feature: Added the `CF7_get_theme_option` shortcode. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-theme-option/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme).
+* Feature: Added `wpcf7dtx_sanitize` filter that sanitizes attribute values in built-in shortcodes.
+* Feature: Added `wpcf7dtx_escape` filter that escapes values in built-in shortcodes.
+* Feature: Added `wpcf7dtx_allow_protocols` filter to customize allowed protocols in escaping URLs in built-in shortcodes.
+* Fix: Updated how plugin gets dynamic value in form tags, now uses `wpcf7dtx_get_dynamic()` function.
+* Fix: Added case-insensitive ID in `CF7_get_post_var`
+* Fix: Sanitizes post variable keys as keys in `wpcf7dtx_get_post_var()`
+* Fix: Updated `wpcf7dtx_get_post_id()` to pull from "the loop" if `$post` is unavailable.
+* Fix: Marked compatible with WordPress core version 6.2.
 
 = 3.2 =
 
@@ -250,8 +274,7 @@ Please check out the [FAQ on our website](https://aurisecreative.com/docs/contac
 * Updated minimum PHP requirement to 7.4 moving forward
 * Update branding assets
 * Update Tested Up To to 6.1.1
-* Plugin will now be jointly maintained by SevenSpark and AuRise Creative
-
+* Plugin will now be jointly maintained by SevenSpark and [AuRise Creative](https://aurisecreative.com)
 
 = 3.1.3 =
 
@@ -274,9 +297,9 @@ Please check out the [FAQ on our website](https://aurisecreative.com/docs/contac
 
 **Release Date: January 25, 2023**
 
-* Feature: Added the `CF7_get_attachment` shortcode. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-media-attachment/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme)
+* Feature: Added the `CF7_get_attachment` shortcode. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-media-attachment/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme).
 * Feature: Added the `CF7_guid` shortcode. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-guid/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme).
-* Feature: Added the dynamic placeholder option to the dynamic form tags that allows you to specify dynamic or static placeholder content while also setting dynamic values. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-attribute-placeholder/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme)
+* Feature: Added the dynamic placeholder option to the dynamic form tags that allows you to specify dynamic or static placeholder content while also setting dynamic values. For usage details, see the [knowledge base](https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-attribute-placeholder/?utm_source=wordpress.org&utm_medium=link&utm_campaign=contact-form-7-dynamic-text-extension&utm_content=readme).
 * Feature: Added a "required" dynamic hidden tag (e.g., `[dynamichidden* ...]`). It is identical to the original dynamic hidden tag (as in the field is not actually validated as required because it is hidden); it just doesn't break your website if you use it. This feature was requested by a user.
 * Feature: Added the `obfuscate` attribute to all included shortcodes
 

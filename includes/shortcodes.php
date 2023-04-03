@@ -26,182 +26,164 @@ function wpcf7dtx_init_shortcodes()
     add_shortcode('CF7_get_custom_field', 'wpcf7dtx_get_custom_field');
     add_shortcode('CF7_get_current_user', 'wpcf7dtx_get_current_user');
     add_shortcode('CF7_get_attachment', 'wpcf7dtx_get_attachment');
-    add_shortcode('CF7_guid', 'wpcf7dtx_guid');
+    add_shortcode('CF7_get_cookie', 'wpcf7dtx_get_cookie');
+    add_shortcode('CF7_get_taxonomy', 'wpcf7dtx_get_taxonomy');
+    add_shortcode('CF7_get_theme_option', 'wpcf7dtx_get_theme_option');
+    add_shortcode('CF7_guid', 'wpcf7dtx_guid', 10, 0);
 }
 add_action('init', 'wpcf7dtx_init_shortcodes'); //Add init hook to add shortcodes
 
 /**
  * Get Variable from $_GET Array
  *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-php-get-variables/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_get($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_get($atts = array())
 {
     extract(shortcode_atts(array(
         'key' => 0,
+        'default' => '',
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
-    $valid_key = (is_numeric($key) && intval($key) > -1) || (is_string($key) && !empty($key));
-    if ($valid_key && is_array($_GET) && count($_GET) && array_key_exists($key, $_GET) && !empty($_GET[$key])) {
-        $value = sanitize_text_field(strval($_GET[$key]));
-        if ($obfuscate && !empty($value)) {
-            return wpcf7dtx_obfuscate($value);
-        }
-        return $value;
-    }
-    return '';
+    $value = apply_filters('wpcf7dtx_sanitize', wpcf7dtx_array_has_key($key, $_GET, $default));
+    return apply_filters('wpcf7dtx_escape', $value, $obfuscate);
 }
 
 /**
  * Get Variable from $_POST Array
  *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-php-post-variables/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_post($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_post($atts = array())
 {
     extract(shortcode_atts(array(
         'key' => '',
+        'default' => '',
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
-    $valid_key = (is_numeric($key) && intval($key) > -1) || (is_string($key) && !empty($key));
-    if ($valid_key && is_array($_POST) && count($_POST) && array_key_exists($key, $_POST) && !empty($_POST[$key])) {
-        $value = sanitize_text_field(strval($_POST[$key]));
-        if ($obfuscate && !empty($value)) {
-            return wpcf7dtx_obfuscate($value);
-        }
-        return $value;
-    }
-    return '';
+    $value = apply_filters('wpcf7dtx_sanitize', wpcf7dtx_array_has_key($key, $_POST, $default));
+    return apply_filters('wpcf7dtx_escape', $value, $obfuscate);
 }
 
 /**
  * Get the Current URL
  *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-current-url/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_url($atts = array(), $content = '', $tag = '') {
-
+function wpcf7dtx_url($atts = array())
+{
     extract(shortcode_atts(array(
-        'allowed_protocols' => 'http,https',
-        'obfuscate' => '',
+        'allowed_protocols' => '',
         'part' => '',
+        'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
 
-    $allowed_protocols = explode(',', sanitize_text_field($allowed_protocols));
-    
     // Build the full URL from the $_SERVER array
-    $url = sprintf('http%s://', is_ssl() ? 's' : '');
-    if (!empty($_SERVER['SERVER_PORT']) && intval($_SERVER['SERVER_PORT']) !== 80) {
+    $url = sprintf('http%s://', is_ssl() ? 's' : ''); // Begin the protocol
+    if (($port = wpcf7dtx_array_has_key('SERVER_PORT', $_SERVER)) && $port !== 80) {
         $url = $url . $_SERVER['SERVER_NAME'] . ':' . $_SERVER['SERVER_PORT'] . $_SERVER['REQUEST_URI'];
     } else {
         $url = $url . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
     }
-
-    // Determine the value to return
-    $value = '';
-
-    // If an individual part is requested, get that specific value using parse_url()
-    if( $part ){
-        $part_constant_map = [
-            'host'  => PHP_URL_HOST,
-            'query' => PHP_URL_QUERY,
-            'path'  => PHP_URL_PATH,
-            // 'fragment'  => PHP_URL_FRAGMENT, // Can't get fragment because it's not part of the $_SERVER array
-        ];
-        if( isset( $part_constant_map[$part] ) ) {
-            $value = sanitize_text_field(parse_url($url, $part_constant_map[$part]));
+    $url = apply_filters('wpcf7dtx_sanitize', $url, 'url', $allowed_protocols);
+    if ($url) {
+        // Determine the value to return
+        if ($part) {
+            // If an individual part is requested, get that specific value using parse_url()
+            $part_constant_map = array(
+                'host'  => PHP_URL_HOST,
+                'query' => PHP_URL_QUERY,
+                'path'  => PHP_URL_PATH
+            );
+            if (key_exists($part, $part_constant_map)) {
+                $value = apply_filters('wpcf7dtx_sanitize', parse_url($url, $part_constant_map[$part]), 'text');
+                return apply_filters('wpcf7dtx_escape', $value, $obfuscate, 'text');
+            }
+            return '';
         }
+        // No part requested, return the whole thing
+        return apply_filters('wpcf7dtx_escape', $url, $obfuscate, 'url', $allowed_protocols);
     }
-    // No part requested, return the whole thing
-    else {
-        $value = sanitize_url($url, $allowed_protocols);
-    }
-
-    // Obfuscate if requested
-    if ($obfuscate && !empty($value)) {
-        return wpcf7dtx_obfuscate($value);
-    }
-    return $value;
+    return '';
 }
 
 /**
  * Get Referrer
  *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-referrer-url/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_referrer($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_referrer($atts = array())
 {
     extract(shortcode_atts(array(
         'allowed_protocols' => 'http,https',
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
-    $allowed_protocols = explode(',', sanitize_text_field($allowed_protocols));
-    $value = empty($_SERVER['HTTP_REFERER']) ? '' : sanitize_url($_SERVER['HTTP_REFERER'], $allowed_protocols);
-    if ($obfuscate && !empty($value)) {
-        return wpcf7dtx_obfuscate($value);
+    if ($value = wpcf7dtx_array_has_key('HTTP_REFERER', $_SERVER)) {
+        $value = apply_filters('wpcf7dtx_sanitize', $value, 'url', $allowed_protocols);
+        return apply_filters('wpcf7dtx_escape', $value, $obfuscate, 'url');
     }
-    return $value;
+    return '';
 }
 
 /**
  * Get Variable from Bloginfo
  *
- * See possible values: https://developer.wordpress.org/reference/functions/get_bloginfo/
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-post-page-variables/
+ * @see https://developer.wordpress.org/reference/functions/get_bloginfo/
  *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_bloginfo($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_bloginfo($atts = array())
 {
     extract(shortcode_atts(array(
         'show' => 'name', //Backwards compatibility
         'key' => 'name',
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
-    $key = $show != $key && $show != 'name' ? $show : $key; //Use old value of "show" if not set to default value
-    $value = sanitize_text_field(strval(get_bloginfo($key)));
-    if ($obfuscate && !empty($value)) {
-        return wpcf7dtx_obfuscate($value);
-    }
-    return $value;
+    $key = $show != $key && $show != 'name' ? $show : $key; // Use old value of "show" if not set to default value
+    return apply_filters('wpcf7dtx_escape', get_bloginfo($key), $obfuscate);
 }
 
 /**
  * Get Variable from a Post Object
  *
+ * @link https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-post-page-variables/
+ * @see https://developer.wordpress.org/reference/functions/get_post_field/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_get_post_var($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_get_post_var($atts = array())
 {
     extract(shortcode_atts(array(
         'key' => 'post_title',
         'post_id' => '',
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
+    $key = strtolower(apply_filters('wpcf7dtx_sanitize', $key, 'key'));
     switch ($key) {
+        case 'id':
+            $key = 'ID';
+            break;
         case 'slug':
             $key = 'post_name';
             break;
@@ -212,12 +194,8 @@ function wpcf7dtx_get_post_var($atts = array(), $content = '', $tag = '')
             break;
     }
     $post_id = wpcf7dtx_get_post_id($post_id);
-    if ($post_id && is_string($key) && !empty($key)) {
-        $value = sanitize_text_field(trim(strval(get_post_field($key, $post_id))));
-        if ($obfuscate && !empty($value)) {
-            return wpcf7dtx_obfuscate($value);
-        }
-        return $value;
+    if ($post_id) {
+        return apply_filters('wpcf7dtx_escape', get_post_field($key, $post_id), $obfuscate);
     }
     return '';
 }
@@ -225,13 +203,14 @@ function wpcf7dtx_get_post_var($atts = array(), $content = '', $tag = '')
 /**
  * Get Value from Post Meta Field
  *
+ * @see  https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-post-meta-custom-fields/
+ * @see https://developer.wordpress.org/reference/functions/get_post_meta/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_get_custom_field($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_get_custom_field($atts = array())
 {
     extract(shortcode_atts(array(
         'key' => '',
@@ -239,12 +218,8 @@ function wpcf7dtx_get_custom_field($atts = array(), $content = '', $tag = '')
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
     $post_id = wpcf7dtx_get_post_id($post_id);
-    if ($post_id && is_string($key) && !empty($key)) {
-        $value = get_post_meta($post_id, $key, true);
-        if ($obfuscate && !empty($value)) {
-            return wpcf7dtx_obfuscate($value);
-        }
-        return $value;
+    if ($post_id) {
+        return apply_filters('wpcf7dtx_escape', get_post_meta($post_id, $key, true), $obfuscate);
     }
     return '';
 }
@@ -253,7 +228,9 @@ function wpcf7dtx_get_custom_field($atts = array(), $content = '', $tag = '')
  * Get Value from Current User
  *
  * Retreives data from the `users` and `usermeta` tables.
- * Documentation: https://developer.wordpress.org/reference/classes/wp_user/get/
+ *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-current-user-user-meta/
+ * @see https://developer.wordpress.org/reference/classes/wp_user/get/
  *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
  * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
@@ -269,11 +246,7 @@ function wpcf7dtx_get_current_user($atts = array(), $content = '', $tag = '')
     ), array_change_key_case((array)$atts, CASE_LOWER)));
     if (is_user_logged_in()) {
         $user = wp_get_current_user();
-        $value = $user->get($key);
-        if ($obfuscate && !empty($value)) {
-            return wpcf7dtx_obfuscate($value);
-        }
-        return $value;
+        return apply_filters('wpcf7dtx_escape', $user->get($key), $obfuscate);
     }
     return '';
 }
@@ -285,13 +258,15 @@ function wpcf7dtx_get_current_user($atts = array(), $content = '', $tag = '')
  *
  * @since 3.1.0
  *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-media-attachment/
+ * @see https://developer.wordpress.org/reference/functions/get_post_thumbnail_id/
+ * @see https://developer.wordpress.org/reference/functions/wp_get_attachment_image_url/
+ *
  * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
  *
  * @return string Output of the shortcode
  */
-function wpcf7dtx_get_attachment($atts = array(), $content = '', $tag = '')
+function wpcf7dtx_get_attachment($atts = array())
 {
     extract(shortcode_atts(array(
         'id' => '', //Get attachment by ID
@@ -303,56 +278,132 @@ function wpcf7dtx_get_attachment($atts = array(), $content = '', $tag = '')
 
     //No attachment ID was provided, check for post ID to get it's featured image
     if (empty($id)) {
-        if ($post_id = sanitize_text_field(strval($post_id))) {
+        if ($post_id = wpcf7dtx_get_post_id($post_id)) {
             //If a post ID was provided, get it's featured image
-            if (is_numeric($post_id) && (int)$post_id > 0) {
-                $id = get_post_thumbnail_id($post_id);
-            }
-        } else {
-            //If no post ID was provided, get current featured image
-            global $post;
-            if (isset($post) && property_exists($post, 'ID') && is_numeric($post->ID)) {
-                $id = get_post_thumbnail_id(intval($post->ID));
-            }
+            $id = get_post_thumbnail_id($post_id);
         }
     }
 
     //Get the value
-    $value = '';
     if ($id) {
         $id = intval(sanitize_text_field(strval($id)));
         switch ($return) {
             case 'id': //Return the attachment ID
-                $value = esc_attr($id);
-                break;
+                return apply_filters('wpcf7dtx_escape', $id, $obfuscate);
             default: //Return attachment URL
                 $url = wp_get_attachment_image_url(intval($id), sanitize_text_field(strval($size)));
-                $value = $url ? esc_url($url) : '';
-                break;
-        }
-        if ($obfuscate && !empty($value)) {
-            return wpcf7dtx_obfuscate($value);
+                return apply_filters('wpcf7dtx_escape', $url, $obfuscate, 'url');
         }
     }
-    return $value;
+    return '';
 }
 
 /**
  * GUID Field
  *
+ * Generate a random GUID (globally unique identifier)
+ *
  * @since 3.1.0
  *
- * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
- * @param string $content Optional. A string of content between the opening and closing tags. Default is an empty string.
- * @param string $tag Optional. The shortcode tag. Default is an empty string.
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-guid/
  *
- * @return string Output of the shortcode
+ * @return string a randomly generated 128-bit text string.
  */
 function wpcf7dtx_guid()
 {
     if (function_exists('com_create_guid') === true) {
-        return trim(com_create_guid(), '{}');
+        return esc_attr(trim(com_create_guid(), '{}'));
     }
-    return sprintf('%04X%04X-%04X-%04X-%04X-%04X%04X%04X', mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(16384, 20479), mt_rand(32768, 49151), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535));
+    return esc_attr(sprintf('%04X%04X-%04X-%04X-%04X-%04X%04X%04X', mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(16384, 20479), mt_rand(32768, 49151), mt_rand(0, 65535), mt_rand(0, 65535), mt_rand(0, 65535)));
 }
 
+/**
+ * Get Cookie
+ *
+ * Retreives the value of a cookie
+ *
+ * @since 4.0.0
+ *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-cookie/
+ *
+ * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
+ *
+ * @return string Output of the shortcode
+ */
+function wpcf7dtx_get_cookie($atts = array())
+{
+    extract(shortcode_atts(array(
+        'key' => '',
+        'default' => '',
+        'obfuscate' => '' // Optionally obfuscate returned value
+    ), array_change_key_case((array)$atts, CASE_LOWER)));
+    $key = apply_filters('wpcf7dtx_sanitize', $key, 'key');
+    $value = wpcf7dtx_array_has_key($key, $_COOKIE, $default);
+    return apply_filters('wpcf7dtx_escape', $value, $obfuscate);
+}
+
+/**
+ * Get Taxonomy
+ *
+ * Retreives a list of taxonomy values
+ *
+ * @since 4.0.0
+ *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-taxonomy/
+ * @see https://developer.wordpress.org/reference/classes/wp_term_query/get_terms/
+ *
+ * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
+ *
+ * @return string Output of the shortcode
+ */
+function wpcf7dtx_get_taxonomy($atts = array())
+{
+    extract(shortcode_atts(array(
+        'post_id' => '',
+        'taxonomy' => 'category', // Default category
+        'fields' => 'names', // Return an array of term names
+        'obfuscate' => '' // Optionally obfuscate returned value
+    ), array_change_key_case((array)$atts, CASE_LOWER)));
+    $post_id = wpcf7dtx_get_post_id($post_id);
+    $fields = apply_filters('wpcf7dtx_sanitize', $fields, 'key');
+    if ($post_id && in_array($fields, array('names', 'slugs', 'ids'))) {
+        $terms = wp_get_object_terms(
+            $post_id, // Get only the ones assigned to this post
+            apply_filters('wpcf7dtx_sanitize', $taxonomy, 'slug'),
+            array('fields' => $fields)
+        );
+        if (is_array($terms) && count($values = array_values($terms)) && (is_string($values[0]) || is_numeric($values[0]))) {
+            return apply_filters('wpcf7dtx_escape', implode(', ', $values), $obfuscate, 'text');
+        }
+    }
+    return '';
+}
+
+/**
+ * Get Theme Customization Option
+ *
+ * Retreives theme modification value for the active theme
+ *
+ * @since 4.0.0
+ *
+ * @see https://aurisecreative.com/docs/contact-form-7-dynamic-text-extension/shortcodes/dtx-shortcode-theme-option/
+ * @see https://developer.wordpress.org/reference/functions/get_theme_mod/
+ *
+ * @param array $atts Optional. An associative array of shortcode attributes. Default is an empty array.
+ *
+ * @return string Output of the shortcode
+ */
+function wpcf7dtx_get_theme_option($atts = array())
+{
+    extract(shortcode_atts(array(
+        'key' => '',
+        'default' => '', // Optional default value
+        'obfuscate' => '' // Optionally obfuscate returned value
+    ), array_change_key_case((array)$atts, CASE_LOWER)));
+    $key = apply_filters('wpcf7dtx_sanitize', $key, 'text');
+    if ($key) {
+        $default = apply_filters('wpcf7dtx_sanitize', $default);
+        return apply_filters('wpcf7dtx_escape', get_theme_mod($key, $default), $obfuscate);
+    }
+    return '';
+}

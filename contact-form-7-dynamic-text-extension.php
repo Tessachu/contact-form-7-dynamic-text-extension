@@ -4,7 +4,7 @@
  * Plugin Name: Contact Form 7 - Dynamic Text Extension
  * Plugin URI: https://sevenspark.com/goods/contact-form-7-dynamic-text-extension
  * Description: This plugin extends Contact Form 7 by adding dynamic form fields that accept any shortcode to generate default values and placeholder text. Requires Contact Form 7.
- * Version: 3.2
+ * Version: 4.0.0
  * Author: SevenSpark, AuRise Creative
  * Author URI: https://sevenspark.com
  * License: GPL2
@@ -32,7 +32,7 @@
 */
 
 // Define current version
-define('WPCF7DTX_VERSION', '3.2');
+define('WPCF7DTX_VERSION', '4.0.0');
 
 // Define root directory
 defined('WPCF7DTX_DIR') || define('WPCF7DTX_DIR', __DIR__);
@@ -72,9 +72,46 @@ function wpcf7dtx_add_shortcode_dynamictext()
 }
 
 /**
+ * Include Utility Functions
+ */
+include_once(WPCF7DTX_DIR . '/includes/utilities.php');
+
+/**
+ * Get Dynamic Value
+ *
+ * @since 4.0.0
+ *
+ * @param string $value The form tag value.
+ * @param WPCF7_FormTag|false $tag Optional. Use to look up default value.
+ *
+ * @return string The dynamic output or the original value, not escaped or sanitized.
+ */
+function wpcf7dtx_get_dynamic($value, $tag = false)
+{
+    if ($tag !== false) {
+        $default = $tag->get_option('defaultvalue', '', true);
+        if (!$default) {
+            $default = $tag->get_default_option(strval(reset($tag->values)));
+        }
+        $value = wpcf7_get_hangover($tag->name, $default);
+    }
+    $value = apply_filters('wpcf7dtx_sanitize', $value);
+    if (is_string($value) && !empty($value)) {
+        // If a shortcode was passed as the options, evaluate it and use the result
+        $shortcode_tag = '[' . $value . ']';
+        $shortcode_output = do_shortcode($shortcode_tag); //Shortcode value
+        if (is_string($shortcode_output) && $shortcode_output != $shortcode_tag) {
+            return apply_filters('wpcf7dtx_sanitize', $shortcode_output);
+        }
+    }
+    return $value;
+}
+
+/**
  * Form Tag Handler
  *
  * @param WPCF7_FormTag $tag
+ *
  * @return string HTML output of the shortcode
  */
 function wpcf7dtx_dynamictext_shortcode_handler($tag)
@@ -122,24 +159,15 @@ function wpcf7dtx_dynamictext_shortcode_handler($tag)
     }
 
     // Evaluate the dynamic value
-    $value = wpcf7_get_hangover($tag->name,  $tag->get_default_option(strval(reset($tag->values)))); // Input value
-    $scstr = '[' . $value . ']';
-    $scval = do_shortcode($scstr); //Shortcode value
-    if ($scval !== $scstr) {
-        $value = $scval; //Set the input value to the evaluated shortcode
-    }
+    $value = wpcf7dtx_get_dynamic(false, $tag);
 
     // Identify placeholder
     if ($tag->has_option('placeholder') || $tag->has_option('watermark')) {
         //Reverse engineer what JS did (converted quotes to HTML entities --> URL encode) then sanitize
-        $placeholder = sanitize_text_field(html_entity_decode(urldecode(implode('', (array)$tag->get_option('placeholder'))), ENT_QUOTES));
+        $placeholder = html_entity_decode(urldecode(implode('', (array)$tag->get_option('placeholder'))), ENT_QUOTES);
         if ($placeholder) {
-            $scpstr = '[' . $placeholder . ']';
-            $scpval = do_shortcode($scpstr); //Shortcode value
-            if ($scpval !== $scpstr) {
-                $placeholder = $scpval; //Set the placeholder value to the evaluated shortcode
-            }
             //If a different placeholder text has been specified, set both attributes
+            $placeholder = wpcf7dtx_get_dynamic($placeholder);
             $atts['placeholder'] = $placeholder;
             $atts['value'] = $value;
         } else {
@@ -197,11 +225,6 @@ function wpcf7dtx_dynamictext_validation_filter($result, $tag)
     }
     return $result;
 }
-
-/**
- * Include Utility Functions
- */
-include_once(WPCF7DTX_DIR . '/includes/utilities.php');
 
 if (is_admin()) {
     /**
