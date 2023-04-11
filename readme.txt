@@ -3,7 +3,7 @@ Contributors: sevenspark, tessawatkinsllc
 Donate link: https://just1voice.com/donate/
 Tags: Contact Form 7, contact, contact form, dynamic, text, input, GET, POST, title, slug, autofill, auto-fill, prepopulate, pre-populate, form field
 Tested up to: 6.2
-Stable tag: 4.0.0
+Stable tag: 4.0.1
 
 This plugin provides additional form tags for the Contact Form 7 plugin. It allows dynamic generation of content for text or hidden input fields using any shortcode.
 
@@ -243,15 +243,21 @@ Please check out the [FAQ on our website](https://aurisecreative.com/docs/contac
 
 == Upgrade Notice ==
 
-= 4.0.0 =
+= 4.0.1 =
 
-New built-in shortcodes for getting cookies, taxonomies, and theme options!
+Fixed a bug that prevented the use of capital letters in cookie keys.
 
 == Changelog ==
 
 = 4.0.0 =
 
-**Release Date: April 3, 2023**
+**Released to GitHub: April 11, 2023**
+
+* Fix: Changed sanitization method for cookie and post functions to use auto instead of forced to use key so that uppercase/camel case keys would be respected.
+
+= 4.0.0 =
+
+**Released to GitHub: April 3, 2023**
 
 * Breaking: Changed how sanitization works in built-in shortcodes
 * Breaking: Changed how escaping works in built-in shortcodes

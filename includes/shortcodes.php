@@ -179,7 +179,7 @@ function wpcf7dtx_get_post_var($atts = array())
         'post_id' => '',
         'obfuscate' => ''
     ), array_change_key_case((array)$atts, CASE_LOWER)));
-    $key = strtolower(apply_filters('wpcf7dtx_sanitize', $key, 'key'));
+    $key = strtolower(apply_filters('wpcf7dtx_sanitize', $key));
     switch ($key) {
         case 'id':
             $key = 'ID';
@@ -337,7 +337,7 @@ function wpcf7dtx_get_cookie($atts = array())
         'default' => '',
         'obfuscate' => '' // Optionally obfuscate returned value
     ), array_change_key_case((array)$atts, CASE_LOWER)));
-    $key = apply_filters('wpcf7dtx_sanitize', $key, 'key');
+    $key = apply_filters('wpcf7dtx_sanitize', $key);
     $value = wpcf7dtx_array_has_key($key, $_COOKIE, $default);
     return apply_filters('wpcf7dtx_escape', $value, $obfuscate);
 }
